@@ -7,35 +7,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 export async function POST(req: Request) {
   try {
-    const { planName } = await req.json();
+    const { priceId } = await req.json();
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
-          price_data: {
-            currency: "jpy",
-            product_data: {
-              name: `MOVA ${planName} プラン`,
-            },
-            unit_amount: planName === "Pro" ? 980 : 2980,
-            recurring: {
-              interval: "month",
-            },
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/pricing`,
-    });
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/chat?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/pricing`,
+    } as any);
 
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
-    console.error("Stripe Checkout Error:", err);
+    console.error("Stripe Error:", err);
     return NextResponse.json(
-      { error: err.message || "決済処理に失敗しました" },
+      { error: err.message },
       { status: 500 }
     );
   }
